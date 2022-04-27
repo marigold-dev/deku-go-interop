@@ -60,7 +60,7 @@ func Set(key string, value interface{}) {
 	write(message)
 }
 
-func Main(state_transition func(input []byte) (err error)) {
+func Main(state_transition func(sender []byte, input []byte) (err error)) {
 	println("Opening read")
 	fifo_path := os.Args[1]
 	fmt.Printf("fifo path: %s\n", fifo_path)
@@ -69,9 +69,10 @@ func Main(state_transition func(input []byte) (err error)) {
 	chain_to_machine, _ = os.OpenFile(fifo_path+"_write", os.O_RDONLY, 0666)
 	println("done")
 	for {
+		sender := read()
 		input := read()
 		fmt.Printf("Read start message: %s\n", string(input))
-		err := state_transition(input)
+		err := state_transition(sender, input)
 		var end_message []byte
 		if err != nil {
 			end_message = []byte(fmt.Sprintf("[\"Error\", \"%s\"]", err.Error()))
