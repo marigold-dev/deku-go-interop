@@ -69,6 +69,11 @@ func Main(state_transition func(sender []byte, input []byte) (err error)) {
 	chain_to_machine, _ = os.OpenFile(fifo_path+"_write", os.O_RDONLY, 0666)
 	println("done")
 	for {
+		// TODO: replace this with a control pipe
+		control := read()
+		if (string(control) == "\"close\"") {
+			break;
+		}
 		sender := read()
 		input := read()
 		fmt.Printf("Read start message: %s\n", string(input))
