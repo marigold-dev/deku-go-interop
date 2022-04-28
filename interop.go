@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
 var chain_to_machine *os.File
@@ -21,6 +22,14 @@ func check(e error) {
 	}
 }
 
+func log(message string) {
+	// TODO: implement debug mode logging.
+	if false {
+		colored := fmt.Sprintf("\x1b[%dm%s\x1b[0m", 31, message)
+		fmt.Fprintln(os.Stderr, colored)
+	}
+}
+
 func read() []byte {
 	// read the number of bytes being sent
 	b := make([]byte, 8)
@@ -29,7 +38,7 @@ func read() []byte {
 	n := binary.LittleEndian.Uint16(b)
 	value := make([]byte, n)
 	bytes_read, err := chain_to_machine.Read(value)
-	fmt.Printf("read %d bytes\n", bytes_read)
+	log(fmt.Sprintf("read %d bytes", bytes_read))
 	return value
 }
 
@@ -60,23 +69,23 @@ func Set(key string, value interface{}) {
 	write(message)
 }
 
-func Main(state_transition func(sender []byte, input []byte) (err error)) {
-	println("Opening read")
+func Main(state_transition func(sender string, input []byte) (err error)) {
+	log("Opening read")
 	fifo_path := os.Args[1]
-	fmt.Printf("fifo path: %s\n", fifo_path)
+	log(fmt.Sprintf("fifo path: %s", fifo_path))
 	machine_to_chain, _ = os.OpenFile(fifo_path+"_read", os.O_WRONLY, 0666)
-	println("Opening write")
+	log("Opening write")
 	chain_to_machine, _ = os.OpenFile(fifo_path+"_write", os.O_RDONLY, 0666)
-	println("done")
+	log("done")
 	for {
 		// TODO: replace this with a control pipe
 		control := read()
-		if (string(control) == "\"close\"") {
-			break;
+		if string(control) == "\"close\"" {
+			break
 		}
-		sender := read()
+		sender := strings.Trim(string(read()),"\"")
 		input := read()
-		fmt.Printf("Read start message: %s\n", string(input))
+		log(fmt.Sprintf("Read start message: %s", string(input)))
 		err := state_transition(sender, input)
 		var end_message []byte
 		if err != nil {
